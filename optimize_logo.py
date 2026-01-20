@@ -1,41 +1,51 @@
 from PIL import Image, ImageChops, ImageOps
 
-def optimize_logo(input_path, output_path, padding_ratio=0.15):
+def optimize_logo(input_path, output_path, padding_ratio=0.30, shave_px=3):
     img = Image.open(input_path).convert("RGBA")
 
-    # 1. More aggressive crop with tolerance
-    # Convert to grayscale to check brightness
+    # 1. Smart Crop (Threshold)
+    # Convert to grayscale
     gray = img.convert("L")
 
     # Invert so content is bright, white bg is dark
-    # Note: If logo is black on white, white->255, black->0.
-    # Invert: white->0, black->255.
     inverted = ImageOps.invert(gray)
 
-    # Threshold: anything "near white" (originally > 240) becomes 0 in inverted
-    # So if inverted pixel < 15 (original > 240), make it 0
+    # Threshold white pixels (original > 240) to black (0)
     threshold = 15
     mask = inverted.point(lambda p: 255 if p > threshold else 0)
 
+    # Get bounding box of explicit content
     bbox = mask.getbbox()
 
     if bbox:
-        print(f"Original size: {img.size}")
-        img_cropped = img.crop(bbox)
-        print(f"Smart cropped size: {img_cropped.size} (bbox: {bbox})")
+        # Shave edges to remove 1-pixel border artifacts
+        left, top, right, bottom = bbox
+        left = min(left + shave_px, right)
+        top = min(top + shave_px, bottom)
+        right = max(right - shave_px, left)
+        bottom = max(bottom - shave_px, top)
+
+        print(f"Original bbox: {bbox}")
+        print(f"Shaved bbox: {(left, top, right, bottom)}")
+
+        img_cropped = img.crop((left, top, right, bottom))
     else:
         print("Could not detect content! Using original.")
         img_cropped = img
 
-    # 2. Pad
+    # 2. Add controlled padding
     w, h = img_cropped.size
     max_dim = max(w, h)
+
+    # Calculated square canvas side
     canvas_side = int(max_dim * (1 + 2 * padding_ratio))
 
-    # White BG
-    bg_color = (255, 255, 255, 255)
+    # Transparent BG for Adaptive Icon Foreground
+    bg_color = (255, 255, 255, 0)
+
     new_img = Image.new("RGBA", (canvas_side, canvas_side), bg_color)
 
+    # Center content
     offset_x = (canvas_side - w) // 2
     offset_y = (canvas_side - h) // 2
 
@@ -45,4 +55,5 @@ def optimize_logo(input_path, output_path, padding_ratio=0.15):
     print(f"Saved optimized logo to {output_path}")
 
 if __name__ == "__main__":
-    optimize_logo("assets/images/logo.png", "assets/images/logo_optimized.png", padding_ratio=0.30)
+    # Padding 0.45 shrinks the logo further (zooms out)
+    optimize_logo("assets/images/logo.png", "assets/images/logo_optimized.png", padding_ratio=0.45, shave_px=5)

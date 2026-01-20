@@ -184,9 +184,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _requestNotificationPermission() async {
-    PermissionStatus status = await Permission.notification.request();
+    // Check current status first
+    PermissionStatus status = await Permission.notification.status;
+
     if (status.isGranted) {
-      // Show success feedback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Notification is already on'),
+            backgroundColor: Colors.blue,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Request permission if not granted
+    status = await Permission.notification.request();
+
+    if (status.isGranted) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -195,15 +211,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
         );
       }
+    } else if (status.isPermanentlyDenied) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Notifications disabled. Enable in settings?'),
+            action: SnackBarAction(
+              label: 'Settings',
+              onPressed: () => openAppSettings(),
+            ),
+          ),
+        );
+      }
     } else {
-       // Show feedback or open settings
-       if (mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(
-           const SnackBar(
-             content: Text('Permission denied. Please enable in settings.'),
-           ),
-         );
-       }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Permission denied.'),
+          ),
+        );
+      }
     }
   }
 

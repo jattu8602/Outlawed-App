@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import '../../core/services/auth_service.dart';
 import '../auth/login_page.dart';
 
@@ -17,20 +18,22 @@ class ProfileScreen extends StatelessWidget {
     final user = userData['user'] ?? {};
     final String name = user['name'] ?? 'User';
     final String email = user['email'] ?? '';
+    final String? photoUrl = user['image'];
     final String role = user['role'] ?? 'Free';
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      extendBodyBehindAppBar: true, // Allow body to go behind AppBar
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent, // Transparent to show image
         elevation: 0,
+        leading: const BackButton(color: Colors.white), // Ensure visible on dark bg
         actions: [
           IconButton(
-            icon: const Icon(Icons.share_outlined, color: Colors.black),
+            icon: const Icon(Icons.share_outlined, color: Colors.white),
             onPressed: () {},
           ),
           IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.black),
+            icon: const Icon(Icons.more_vert, color: Colors.white),
             onPressed: () {},
           ),
         ],
@@ -38,39 +41,81 @@ class ProfileScreen extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            const SizedBox(height: 10),
-            // Avatar
-            Center(
-              child: Stack(
-                children: [
-                   CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Colors.black,
-                    child: CircleAvatar(
-                      radius: 48,
-                      backgroundColor: Colors.white,
-                      child: Text(
-                        name.isNotEmpty ? name[0].toUpperCase() : '?',
-                         style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.black),
+            Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.bottomCenter,
+              children: [
+                // Background Image
+                Container(
+                  height: 200,
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage('assets/images/profile_bg.png'),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.3),
+                          Colors.transparent,
+                        ],
                       ),
                     ),
                   ),
-                  Positioned(
-                    bottom: 0,
-                    right: 4,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.black,
-                        shape: BoxShape.circle,
+                ),
+                // Avatar (Overlapping)
+                Positioned(
+                  bottom: -50,
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 54,
+                        backgroundColor: Colors.white, // White border
+                        child: CircleAvatar(
+                          radius: 50,
+                          backgroundColor: Colors.black,
+                          backgroundImage: photoUrl != null && photoUrl.isNotEmpty
+                              ? NetworkImage(photoUrl)
+                              : null,
+                          child: photoUrl != null && photoUrl.isNotEmpty
+                              ? null
+                              : CircleAvatar(
+                                  radius: 48,
+                                  backgroundColor: Colors.white,
+                                  child: Text(
+                                    name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                    style: const TextStyle(
+                                      fontSize: 40,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black
+                                    ),
+                                  ),
+                                ),
+                        ),
                       ),
-                      child: const Icon(Icons.edit, color: Colors.white, size: 14),
-                    ),
+                      Positioned(
+                        bottom: 0,
+                        right: 4,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                            color: Colors.black,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.edit, color: Colors.white, size: 14),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 60), // Space for the overlapping avatar
             // Name & Tag
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -160,14 +205,8 @@ class ProfileScreen extends StatelessWidget {
                     color: Colors.red,
                   ),
                 ),
-                onTap: () async {
-                   await authService.signOut();
-                    if (context.mounted) {
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (context) => const LoginPage()),
-                        (route) => false,
-                      );
-                    }
+                onTap: () {
+                  _showLogoutDialog(context);
                 },
               ),
             ),
@@ -236,6 +275,87 @@ class ProfileScreen extends StatelessWidget {
         subtitle: subtitle.isNotEmpty ? Text(subtitle, style: const TextStyle(fontSize: 12)) : null,
         trailing: const Icon(Icons.chevron_right, color: Colors.grey),
         onTap: () {},
+      ),
+    );
+  }
+
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Lottie.asset(
+              'assets/animations/logout_cat.json',
+              height: 150,
+              width: 150,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Oh no! You are leaving...',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Are you sure you want to logout?',
+              style: TextStyle(color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.black,
+                      side: const BorderSide(color: Colors.grey),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('No'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      Navigator.pop(context); // Close dialog
+                      await authService.signOut();
+                      if (context.mounted) {
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                              builder: (context) => const LoginPage()),
+                          (route) => false,
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Yes'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

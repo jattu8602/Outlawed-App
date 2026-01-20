@@ -74,6 +74,28 @@ class AuthService {
     }
   }
 
+  // Get current user (check session)
+  Future<Map<String, dynamic>?> getCurrentUser() async {
+    try {
+      final Response response = await _dio.get(
+        '${ApiConstants.apiPrefix}/user/status',
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data['user'] != null) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      print('Get user check failed (likely no session): $e');
+      return null;
+    }
+  }
+
   // Sign out
   Future<void> signOut() async {
     await _googleSignIn.signOut();

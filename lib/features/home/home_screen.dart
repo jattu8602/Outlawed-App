@@ -86,8 +86,8 @@ class _HomeScreenState extends State<HomeScreen> {
               label: 'Tests',
             ),
             NavigationDestination(
-              icon: Icon(Icons.psychology_outlined),
-              selectedIcon: Icon(Icons.psychology),
+              icon: Icon(Icons.auto_awesome_outlined),
+              selectedIcon: Icon(Icons.auto_awesome),
               label: 'Lexia',
             ),
             NavigationDestination(

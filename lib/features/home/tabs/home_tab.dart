@@ -17,10 +17,7 @@ class HomeTab extends StatefulWidget {
   State<HomeTab> createState() => _HomeTabState();
 }
 
-class _HomeTabState extends State<HomeTab> with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true;
-
+class _HomeTabState extends State<HomeTab> {
   bool _isStreakActive = false; // Toggle this to test both states
 
   void _showStreakInfo() {
@@ -91,7 +88,6 @@ class _HomeTabState extends State<HomeTab> with AutomaticKeepAliveClientMixin {
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
     final user = widget.userData['user'] ?? {};
     final String name = user['name'] ?? 'User';
 
@@ -531,38 +527,14 @@ class _LexiaAIComponentState extends State<LexiaAIComponent> {
   @override
   void initState() {
     super.initState();
-    _loadPersistedQuote();
-  }
-
-  Future<void> _loadPersistedQuote() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedQuote = prefs.getString('lexia_current_quote');
-    final lastUpdated = prefs.getInt('lexia_last_updated') ?? 0;
-    final now = DateTime.now().millisecondsSinceEpoch;
-
-    // Check if 10 minutes (600,000 ms) have passed
-    if (savedQuote != null && (now - lastUpdated) < 600000) {
-      if (mounted) {
-        setState(() {
-          _currentQuote = savedQuote;
-        });
-      }
-    } else {
-      _pickNewQuote();
-    }
-
-    // Start periodic timer
+    _pickNewQuote();
     _timer = Timer.periodic(const Duration(minutes: 10), (timer) {
       _pickNewQuote();
     });
   }
 
-  Future<void> _pickNewQuote() async {
+  void _pickNewQuote() {
     final newQuote = LexiaQuotes.all[_random.nextInt(LexiaQuotes.all.length)];
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('lexia_current_quote', newQuote);
-    await prefs.setInt('lexia_last_updated', DateTime.now().millisecondsSinceEpoch);
-
     if (mounted) {
       setState(() {
         _currentQuote = newQuote;

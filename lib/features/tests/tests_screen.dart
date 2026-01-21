@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
+import '../../core/services/auth_service.dart';
+import '../auth/login_page.dart';
+import './services/test_service.dart';
+import './models/test_models.dart';
 
 class ExamOption {
   final String name;
@@ -13,13 +18,16 @@ class ExamOption {
 }
 
 class TestsScreen extends StatefulWidget {
-  const TestsScreen({super.key});
+  final AuthService authService;
+  const TestsScreen({super.key, required this.authService});
 
   @override
   State<TestsScreen> createState() => _TestsScreenState();
 }
 
 class _TestsScreenState extends State<TestsScreen> {
+  late final TestService _testService;
+
   final List<ExamOption> _exams = [
     ExamOption(
       name: 'CLAT',
@@ -47,10 +55,75 @@ class _TestsScreenState extends State<TestsScreen> {
   String _selectedTab = 'Free';
   String _selectedFilter = 'All';
 
+  List<TestModel> _tests = [];
+  bool _isLoading = true;
+  String? _error;
+
   @override
   void initState() {
     super.initState();
-    _selectedExam = _exams[0]; // CLAT by default
+    _selectedExam = _exams[0];
+    _testService = TestService(widget.authService);
+    _fetchTests();
+  }
+
+  Future<void> _fetchTests() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final List<TestModel> fetchedTests;
+      if (_selectedTab == 'Free') {
+        fetchedTests = await _testService.getFreeTests();
+      } else {
+        fetchedTests = await _testService.getPremiumTests();
+      }
+
+      setState(() {
+        _tests = fetchedTests;
+        _isLoading = false;
+      });
+    } on DioException catch (e) {
+      setState(() {
+        if (e.response?.statusCode == 401) {
+          _error = 'Unauthorized: Please login to see tests.';
+        } else {
+          _error = 'Failed to load tests. Please try again.';
+        }
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'An unexpected error occurred.';
+        _isLoading = false;
+      });
+    }
+  }
+
+  List<TestModel> get _filteredTests {
+    return _tests.where((test) {
+      final name = _selectedExam.name.toUpperCase();
+      final title = test.title.toUpperCase();
+
+      // Strict filter for other exams, lenient for CLAT
+      bool matchesExam = title.contains(name);
+      if (name == 'CLAT') {
+        // For CLAT, show if title has CLAT OR if it doesn't mention other known exams
+        final mentionsOther = _exams.any((e) => e.name != 'CLAT' && title.contains(e.name.toUpperCase()));
+        matchesExam = title.contains('CLAT') || !mentionsOther;
+      }
+
+      bool matchesFilter = true;
+      if (_selectedFilter == 'Attempted') {
+        matchesFilter = test.isAttempted;
+      } else if (_selectedFilter == 'Non-attempted') {
+        matchesFilter = !test.isAttempted;
+      }
+
+      return matchesExam && matchesFilter;
+    }).toList();
   }
 
   @override
@@ -72,9 +145,12 @@ class _TestsScreenState extends State<TestsScreen> {
                 padding: const EdgeInsets.only(right: 8),
                 child: GestureDetector(
                   onTap: () {
-                    setState(() {
-                      _selectedExam = exam;
-                    });
+                    if (_selectedExam.name != exam.name) {
+                      setState(() {
+                        _selectedExam = exam;
+                      });
+                      _fetchTests();
+                    }
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
@@ -135,38 +211,40 @@ class _TestsScreenState extends State<TestsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: Row(
               children: [
-                // Custom Tab Switcher (Expanded to full width, Slight roundness, Capsule animation)
                 Expanded(
                   child: Container(
                     height: 50,
                     decoration: BoxDecoration(
                       color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(12), // Slight roundness
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Stack(
                       children: [
-                        // Sliding Background Indicator (Capsule-style)
                         AnimatedPositioned(
                           duration: const Duration(milliseconds: 300),
                           curve: Curves.easeInOut,
-                          left: _selectedTab == 'Free' ? 4 : (MediaQuery.of(context).size.width - 40 - 12 - 48) / 2 + 2,
+                          left: _selectedTab == 'Free' ? 4 : (MediaQuery.of(context).size.width - 40 - 12 - 50) / 2 + 2,
                           top: 4,
                           bottom: 4,
-                          width: (MediaQuery.of(context).size.width - 40 - 12 - 48) / 2 - 6,
+                          width: (MediaQuery.of(context).size.width - 40 - 12 - 50) / 2 - 6,
                           child: Container(
                             decoration: BoxDecoration(
                               color: Colors.black,
-                              borderRadius: BorderRadius.circular(10), // Capsule look
+                              borderRadius: BorderRadius.circular(10),
                             ),
                           ),
                         ),
-                        // Tab Text Buttons
                         Row(
                           children: ['Free', 'Paid'].map((tab) {
                             final isSelected = _selectedTab == tab;
                             return Expanded(
                               child: GestureDetector(
-                                onTap: () => setState(() => _selectedTab = tab),
+                                onTap: () {
+                                  if (_selectedTab != tab) {
+                                    setState(() => _selectedTab = tab);
+                                    _fetchTests();
+                                  }
+                                },
                                 child: Container(
                                   color: Colors.transparent,
                                   alignment: Alignment.center,
@@ -188,8 +266,7 @@ class _TestsScreenState extends State<TestsScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                // Filter Button (Icon-only, Opens Dialog)
+                const SizedBox(width: 12),
                 GestureDetector(
                   onTap: () => _showFilterDialog(context),
                   child: Container(
@@ -209,79 +286,222 @@ class _TestsScreenState extends State<TestsScreen> {
               ],
             ),
           ),
-
+          // Test List Section
           Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Selected Exam Logo and Title
-                  AnimatedScale(
-                    duration: const Duration(milliseconds: 300),
-                    scale: 1.0,
-                    child: Container(
-                      width: 180,
-                      height: 180,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.grey.shade100, width: 4),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 25,
-                            offset: const Offset(0, 12),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: Colors.black))
+                : _error != null
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 40),
+                              child: Text(
+                                _error!,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.red.shade700, fontSize: 16),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            if (_error!.contains('Unauthorized'))
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const LoginPage()),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.black,
+                                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: const Text('Go to Login', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              )
+                            else
+                              ElevatedButton(
+                                onPressed: _fetchTests,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.black,
+                                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: const Text('Retry', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              ),
+                          ],
+                        ),
+                      )
+                    : _filteredTests.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.description_outlined, size: 64, color: Colors.grey.shade300),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No ${_selectedTab.toLowerCase()} tests found for ${_selectedExam.name}',
+                                  style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+                                ),
+                              ],
+                            ),
+                          )
+                        : RefreshIndicator(
+                            onRefresh: _fetchTests,
+                            color: Colors.black,
+                            child: ListView.separated(
+                              padding: EdgeInsets.zero,
+                              itemCount: _filteredTests.length,
+                              separatorBuilder: (context, index) => Divider(
+                                height: 1,
+                                thickness: 1,
+                                color: Colors.grey.shade100,
+                                indent: 20,
+                                endIndent: 20,
+                              ),
+                              itemBuilder: (context, index) {
+                                return _buildTestStrip(_filteredTests[index]);
+                              },
+                            ),
                           ),
-                        ],
-                      ),
-                      child: ClipOval(
-                        child: Image.asset(
-                          _selectedExam.logoPath,
-                          fit: BoxFit.cover,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTestStrip(TestModel test) {
+    const bool isUserPaid = false;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      color: Colors.white,
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  test.title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    if (_selectedExam.name != 'CLAT') ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          test.difficulty,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade700,
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    _selectedExam.name,
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: _selectedExam.themeColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(40),
-                    ),
-                    child: Text(
-                      'Ready for Preparation',
+                      const SizedBox(width: 8),
+                    ],
+                    Text(
+                      '${test.numberOfQuestions} Questions',
                       style: TextStyle(
-                        color: _selectedExam.themeColor,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                        fontSize: 12,
+                        color: Colors.grey.shade500,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                  ),
-                  if (_selectedFilter != 'All') ...[
-                    const SizedBox(height: 12),
+                    const SizedBox(width: 8),
                     Text(
-                      'Showing: $_selectedFilter',
+                      '•',
+                      style: TextStyle(color: Colors.grey.shade300),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${test.durationMinutes} Mins',
                       style: TextStyle(
-                        color: Colors.grey.shade500,
                         fontSize: 12,
-                        fontStyle: FontStyle.italic,
+                        color: Colors.grey.shade500,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
-                ],
-              ),
+                ),
+              ],
             ),
           ),
+          const SizedBox(width: 16),
+          if (test.isPaid && !isUserPaid)
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.lock_rounded, size: 18, color: Colors.grey),
+            )
+          else if (test.isAttempted)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Text(
+                      'REATTEMPT',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blueAccent,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    if (test.lastScore != null)
+                      Text(
+                        'Score: ${test.lastScore}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 16),
+                GestureDetector(
+                  onTap: () {}, // Navigate to analysis
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blueAccent.withOpacity(0.08),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.bar_chart_rounded, size: 22, color: Colors.blueAccent),
+                  ),
+                ),
+              ],
+            )
+          else
+            GestureDetector(
+              onTap: () {}, // Navigate to test
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                  color: Colors.black,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.play_arrow_rounded, size: 24, color: Colors.white),
+              ),
+            ),
         ],
       ),
     );
@@ -353,7 +573,7 @@ class _TestsScreenState extends State<TestsScreen> {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
-                          setState(() {}); // Update the main screen
+                          setState(() {});
                           Navigator.pop(context);
                         },
                         style: ElevatedButton.styleFrom(

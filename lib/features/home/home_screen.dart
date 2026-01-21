@@ -50,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final List<Widget> pages = [
       HomeTab(userData: widget.userData),
-      const TestsScreen(),
+      TestsScreen(authService: widget.authService),
       const LexiaScreen(),
       const ContestScreen(),
       ProfileScreen(userData: widget.userData, authService: widget.authService),

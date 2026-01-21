@@ -13,6 +13,9 @@ class ApiConstants {
   // Helper to get full API URL
   static String get fullApiUrl => '$baseUrl$apiPrefix';
 
-  // Tests Endpoint (Example)
-  static const String testsEndpoint = '$apiPrefix/tests';
+  // Tests Endpoints
+  static const String freeTestsEndpoint = '$apiPrefix/tests/free';
+  static const String premiumTestsEndpoint = '$apiPrefix/tests/premium';
+  static String testDetailEndpoint(String id) => '$apiPrefix/tests/$id';
+  static String testSubmitEndpoint(String id) => '$apiPrefix/tests/$id/submit';
 }

@@ -1,4 +1,4 @@
-
+import 'dart:async';
 import 'dart:io';
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
@@ -16,6 +16,7 @@ class AuthService {
 
   late Dio _dio;
   late PersistCookieJar _cookieJar;
+  final Completer<void> _initCompleter = Completer<void>();
 
   AuthService() {
     _dio = Dio(BaseOptions(
@@ -33,7 +34,11 @@ class AuthService {
       storage: FileStorage("$appDocPath/.cookies/"),
     );
     _dio.interceptors.add(CookieManager(_cookieJar));
+    _initCompleter.complete();
   }
+
+  // Await this to ensure service is ready (cookies loaded)
+  Future<void> get ready => _initCompleter.future;
 
   // Sign in with Google and exchange token
   Future<Map<String, dynamic>?> signIn() async {

@@ -129,11 +129,6 @@ class _LexiaScreenState extends State<LexiaScreen> {
     if (text.isEmpty && isDefaultTool) return;
     if (_isSending) return;
 
-    if (_isExhausted(_selectedTool['id'] as String)) {
-      _showFeaturesComparison();
-      return;
-    }
-
     _inputController.clear();
 
     if (_activeChatId == null) {
@@ -243,7 +238,7 @@ class _LexiaScreenState extends State<LexiaScreen> {
       }
 
       _loadUsages();
-      if (_isFree && _selectedTool['id'] != _DEFAULT_TOOL['id']) {
+      if (_isFree) {
         Future.delayed(const Duration(seconds: 1), () {
           if (mounted) _showFeaturesComparison();
         });
@@ -270,8 +265,6 @@ class _LexiaScreenState extends State<LexiaScreen> {
     final limit = (usage['limit'] ?? -1) as int;
     return _isFree && limit != -1 && used >= limit;
   }
-
-  bool get _isCurrentToolExhausted => _isExhausted(_selectedTool['id'] as String);
 
   void _openChat(String chatId) {
     setState(() {
@@ -931,8 +924,6 @@ class _LexiaScreenState extends State<LexiaScreen> {
   }
 
   Widget _buildInputBar() {
-    final exhausted = _isCurrentToolExhausted;
-
     return Container(
       padding: EdgeInsets.fromLTRB(12, 8, 12, MediaQuery.of(context).padding.bottom + 8),
       decoration: BoxDecoration(
@@ -948,9 +939,9 @@ class _LexiaScreenState extends State<LexiaScreen> {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: exhausted ? Colors.red.shade50 : Colors.grey.shade100,
+                color: Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: exhausted ? Colors.red.shade200 : Colors.grey.shade300),
+                border: Border.all(color: Colors.grey.shade300),
               ),
               child: Row(
                 children: [
@@ -958,26 +949,14 @@ class _LexiaScreenState extends State<LexiaScreen> {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      exhausted
-                          ? '${_selectedTool['label']} — Limit exhausted. Tap to upgrade.'
-                          : 'Using: ${_selectedTool['label']}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                        color: exhausted ? Colors.red.shade600 : Colors.grey.shade700,
-                      ),
+                      'Using: ${_selectedTool['label']}',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Colors.grey.shade700),
                     ),
                   ),
-                  if (exhausted)
-                    GestureDetector(
-                      onTap: () => _showFeaturesComparison(),
-                      child: Text('Upgrade', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.red.shade700, decoration: TextDecoration.underline)),
-                    )
-                  else
-                    GestureDetector(
-                      onTap: () => setState(() => _selectedTool = Map<String, dynamic>.from(_DEFAULT_TOOL)),
-                      child: Icon(Icons.close, size: 16, color: Colors.grey.shade500),
-                    ),
+                  GestureDetector(
+                    onTap: () => setState(() => _selectedTool = Map<String, dynamic>.from(_DEFAULT_TOOL)),
+                    child: Icon(Icons.close, size: 16, color: Colors.grey.shade500),
+                  ),
                 ],
               ),
             ),
@@ -998,12 +977,11 @@ class _LexiaScreenState extends State<LexiaScreen> {
               Expanded(
                 child: TextField(
                   controller: _inputController,
-                  enabled: !exhausted,
                   textCapitalization: TextCapitalization.sentences,
                   minLines: 1,
                   maxLines: 5,
                   decoration: InputDecoration(
-                    hintText: exhausted ? 'Limit exhausted — upgrade to continue' : 'Ask Lexia...',
+                    hintText: 'Ask Lexia...',
                     hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.w500),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),

@@ -3,7 +3,7 @@ import '../../core/services/auth_service.dart';
 import 'tabs/home_tab.dart';
 import '../tests/tests_screen.dart';
 import '../lexia/lexia_screen.dart';
-import '../contest/contest_screen.dart';
+import '../leaderboard/leaderboard_screen.dart';
 import '../profile/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -51,8 +51,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Widget> pages = [
       HomeTab(userData: widget.userData),
       TestsScreen(authService: widget.authService),
-      const LexiaScreen(),
-      const ContestScreen(),
+      LexiaScreen(authService: widget.authService),
+      LeaderboardScreen(authService: widget.authService),
       ProfileScreen(userData: widget.userData, authService: widget.authService),
     ];
 
@@ -114,7 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
             NavigationDestination(
               icon: Icon(Icons.emoji_events_outlined),
               selectedIcon: Icon(Icons.emoji_events),
-              label: 'Contest',
+              label: 'Leaderboard',
             ),
             NavigationDestination(
               icon: Icon(Icons.person_outline),

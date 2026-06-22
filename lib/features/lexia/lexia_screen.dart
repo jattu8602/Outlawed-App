@@ -131,6 +131,31 @@ class _LexiaScreenState extends State<LexiaScreen> {
 
     _inputController.clear();
 
+    if (_isFree && _isExhausted(_selectedTool['id'] as String)) {
+      final toolLabel = _selectedTool['label'] as String;
+      setState(() {
+        _messages.add({
+          'id': 'user-${DateTime.now().millisecondsSinceEpoch}',
+          'role': 'USER',
+          'content': text,
+          'toolType': null,
+          'createdAt': DateTime.now().toIso8601String(),
+        });
+        _messages.add({
+          'id': 'limit-${DateTime.now().millisecondsSinceEpoch}',
+          'role': 'ASSISTANT',
+          'content': 'Your limit for **$toolLabel** has been reached. Upgrade to Pro to continue using this tool.',
+          'toolType': _selectedTool['id'],
+          'createdAt': DateTime.now().toIso8601String(),
+        });
+      });
+      _scrollToBottom();
+      Future.delayed(const Duration(seconds: 1), () {
+        if (mounted) _showFeaturesComparison();
+      });
+      return;
+    }
+
     if (_activeChatId == null) {
       final chatId = await _createChat(text.isNotEmpty ? text : 'Using ${_selectedTool['label']}');
       if (!mounted) return;
@@ -444,7 +469,7 @@ class _LexiaScreenState extends State<LexiaScreen> {
                                 ],
                               ),
                             ),
-                            if (usage != null && !isSelected)
+                            if (usage != null)
                               Padding(
                                 padding: const EdgeInsets.only(left: 8),
                                 child: Text(
@@ -452,7 +477,7 @@ class _LexiaScreenState extends State<LexiaScreen> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: exhausted ? Colors.grey.shade400 : Colors.grey.shade500,
+                                    color: isSelected ? Colors.white70 : exhausted ? Colors.grey.shade400 : Colors.grey.shade500,
                                   ),
                                 ),
                               ),
@@ -924,6 +949,16 @@ class _LexiaScreenState extends State<LexiaScreen> {
   }
 
   Widget _buildInputBar() {
+    final selToolId = _selectedTool['id'] as String;
+    final selUsage = _usages[selToolId];
+    String? usageLabel;
+    if (selUsage is Map && _isFree) {
+      final u = selUsage;
+      final limit = (u['limit'] ?? -1) as int;
+      final used = (u['used'] ?? 0) as int;
+      if (limit != -1) usageLabel = '$used/$limit';
+    }
+
     return Container(
       padding: EdgeInsets.fromLTRB(12, 8, 12, MediaQuery.of(context).padding.bottom + 8),
       decoration: BoxDecoration(
@@ -953,6 +988,21 @@ class _LexiaScreenState extends State<LexiaScreen> {
                       style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Colors.grey.shade700),
                     ),
                   ),
+                  if (usageLabel != null)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          usageLabel,
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.grey.shade700),
+                        ),
+                      ),
+                    ),
                   GestureDetector(
                     onTap: () => setState(() => _selectedTool = Map<String, dynamic>.from(_DEFAULT_TOOL)),
                     child: Icon(Icons.close, size: 16, color: Colors.grey.shade500),

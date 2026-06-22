@@ -8,23 +8,37 @@ import '../../core/constants/api_constants.dart';
 import 'lexia_chats_screen.dart';
 
 final _TOOLS = [
-  {'id': 'DOUBT_SOLVER', 'label': 'Doubt Solver', 'icon': Icons.psychology},
-  {'id': 'TEST_GENERATION', 'label': 'Test Generation', 'icon': Icons.quiz},
-  {'id': 'PASSAGE_SUMMARIZER', 'label': 'Summarizer', 'icon': Icons.article},
-  {'id': 'ESSAY_REVIEW', 'label': 'Essay Review', 'icon': Icons.rate_review},
-  {'id': 'COUNSELOR', 'label': 'Counselor', 'icon': Icons.support_agent},
-  {'id': 'SECTION_BOOSTER', 'label': 'Section Booster', 'icon': Icons.trending_up},
-  {'id': 'VOCAB_BUILDER', 'label': 'Vocab Builder', 'icon': Icons.menu_book},
-  {'id': 'CURRENT_NEWS', 'label': 'Current News', 'icon': Icons.newspaper},
-  {'id': 'TEST_ANALYSIS', 'label': 'Test Analysis', 'icon': Icons.analytics},
+  {'id': 'DOUBT_SOLVER', 'label': 'Doubt Solver', 'desc': 'Get instant answers to CLAT questions', 'icon': Icons.psychology},
+  {'id': 'TEST_GENERATION', 'label': 'Generate Test', 'desc': 'Create custom CLAT practice tests', 'icon': Icons.quiz},
+  {'id': 'PASSAGE_SUMMARIZER', 'label': 'Passage Summarizer', 'desc': 'Summarize legal & RC passages', 'icon': Icons.article},
+  {'id': 'ESSAY_REVIEW', 'label': 'Essay Review', 'desc': 'Get feedback on your answers', 'icon': Icons.rate_review},
+  {'id': 'COUNSELOR', 'label': 'CLAT Counselor', 'desc': 'Study advice & career guidance', 'icon': Icons.support_agent},
+  {'id': 'SECTION_BOOSTER', 'label': 'Section Booster', 'desc': 'Focused practice by section', 'icon': Icons.trending_up},
+  {'id': 'VOCAB_BUILDER', 'label': 'Vocab Builder', 'desc': 'Learn legal & English vocabulary', 'icon': Icons.menu_book},
+  {'id': 'CURRENT_NEWS', 'label': 'Current News', 'desc': 'GK & current affairs updates', 'icon': Icons.newspaper},
+  {'id': 'TEST_ANALYSIS', 'label': 'Test Analysis', 'desc': 'Analyze your test performance', 'icon': Icons.analytics},
 ];
 
 final _DEFAULT_TOOL = _TOOLS[0];
 
+const _FEATURES = [
+  {'name': 'AI Doubt Solver', 'free': '1 query/day', 'paid': 'Unlimited', 'toolId': 'DOUBT_SOLVER'},
+  {'name': 'AI Test Generation', 'free': '3 tests/month', 'paid': 'Unlimited', 'toolId': 'TEST_GENERATION'},
+  {'name': 'Passage Summarizer', 'free': 'Not available', 'paid': 'Unlimited', 'toolId': 'PASSAGE_SUMMARIZER'},
+  {'name': 'Essay & Answer Review', 'free': 'Not available', 'paid': '50 reviews/month', 'toolId': 'ESSAY_REVIEW'},
+  {'name': 'CLAT Counselor', 'free': '1 query/day', 'paid': 'Unlimited', 'toolId': 'COUNSELOR'},
+  {'name': 'Section Booster', 'free': '1 query/week', 'paid': 'Unlimited', 'toolId': 'SECTION_BOOSTER'},
+  {'name': 'Vocab Builder', 'free': 'Not available', 'paid': 'Unlimited', 'toolId': 'VOCAB_BUILDER'},
+  {'name': 'Current News', 'free': '5 queries/month', 'paid': 'Unlimited', 'toolId': 'CURRENT_NEWS'},
+  {'name': 'Test Analysis', 'free': 'Not available', 'paid': 'Unlimited', 'toolId': 'TEST_ANALYSIS'},
+  {'name': 'Chat History', 'free': 'Last 7 days', 'paid': 'Unlimited', 'toolId': null},
+];
+
 class LexiaScreen extends StatefulWidget {
   final AuthService authService;
+  final Map<String, dynamic> userData;
 
-  const LexiaScreen({super.key, required this.authService});
+  const LexiaScreen({super.key, required this.authService, required this.userData});
 
   @override
   State<LexiaScreen> createState() => _LexiaScreenState();
@@ -39,6 +53,18 @@ class _LexiaScreenState extends State<LexiaScreen> {
   bool _isSending = false;
   Map<String, dynamic> _selectedTool = _DEFAULT_TOOL;
   Map<String, dynamic> _usages = {};
+  String get _role {
+    final user = widget.userData['user'] as Map<String, dynamic>?;
+    return (user?['role'] as String?) ?? 'FREE';
+  }
+
+  bool get _isFree => _role == 'FREE';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsages();
+  }
 
   @override
   void dispose() {
@@ -97,16 +123,28 @@ class _LexiaScreenState extends State<LexiaScreen> {
     return null;
   }
 
-  void _handleSend() async {
+  Future<void> _handleSend() async {
     final text = _inputController.text.trim();
-    if (text.isEmpty && _selectedTool == _DEFAULT_TOOL) return;
+    final isDefaultTool = _selectedTool['id'] == _DEFAULT_TOOL['id'];
+    if (text.isEmpty && isDefaultTool) return;
     if (_isSending) return;
+
+    if (_isExhausted(_selectedTool['id'] as String)) {
+      _showFeaturesComparison();
+      return;
+    }
 
     _inputController.clear();
 
     if (_activeChatId == null) {
       final chatId = await _createChat(text.isNotEmpty ? text : 'Using ${_selectedTool['label']}');
-      if (chatId == null) return;
+      if (!mounted) return;
+      if (chatId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to create chat. Please try again.'), duration: Duration(seconds: 2)),
+        );
+        return;
+      }
       setState(() => _activeChatId = chatId);
       if (text.isEmpty) return;
     }
@@ -120,7 +158,7 @@ class _LexiaScreenState extends State<LexiaScreen> {
     };
     setState(() => _messages.add(msg));
     _scrollToBottom();
-    _sendMessage(text);
+    await _sendMessage(text);
   }
 
   Future<void> _sendMessage(String content) async {
@@ -140,7 +178,10 @@ class _LexiaScreenState extends State<LexiaScreen> {
     try {
       final response = await widget.authService.client.post(
         '${ApiConstants.apiPrefix}/lexia/chat/${_activeChatId!}/messages',
-        options: Options(responseType: ResponseType.stream),
+        options: Options(
+          responseType: ResponseType.plain,
+          receiveTimeout: const Duration(seconds: 120),
+        ),
         data: {'content': content, 'toolType': _selectedTool['id']},
       );
 
@@ -169,31 +210,20 @@ class _LexiaScreenState extends State<LexiaScreen> {
       String fullContent = '';
 
       if (contentType.contains('text/event-stream')) {
-        final responseBody = response.data;
-        Stream<List<int>> byteStream;
-        if (responseBody is ResponseBody) {
-          byteStream = responseBody.stream;
-        } else if (responseBody is Stream<List<int>>) {
-          byteStream = responseBody;
-        } else {
-          byteStream = const Stream.empty();
-        }
-
-        await for (final chunk in byteStream.transform(utf8.decoder)) {
-          for (final line in chunk.split('\n')) {
-            if (line.startsWith('data: ')) {
-              try {
-                final data = jsonDecode(line.substring(6));
-                if (data['content'] != null) {
-                  fullContent += data['content'] as String;
-                  setState(() {
-                    final idx = _messages.indexWhere((m) => m['id'] == aiMsgId);
-                    if (idx >= 0) _messages[idx] = {..._messages[idx], 'content': fullContent};
-                  });
-                  _scrollToBottom();
-                }
-              } catch (_) {}
-            }
+        final rawBody = response.data as String? ?? '';
+        for (final line in rawBody.split('\n')) {
+          if (line.startsWith('data: ')) {
+            try {
+              final data = jsonDecode(line.substring(6));
+              if (data['content'] != null) {
+                fullContent += data['content'] as String;
+                setState(() {
+                  final idx = _messages.indexWhere((m) => m['id'] == aiMsgId);
+                  if (idx >= 0) _messages[idx] = {..._messages[idx], 'content': fullContent};
+                });
+                _scrollToBottom();
+              }
+            } catch (_) {}
           }
         }
       } else {
@@ -213,6 +243,11 @@ class _LexiaScreenState extends State<LexiaScreen> {
       }
 
       _loadUsages();
+      if (_isFree && _selectedTool['id'] != _DEFAULT_TOOL['id']) {
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted) _showFeaturesComparison();
+        });
+      }
     } catch (e) {
       setState(() {
         _messages.removeWhere((m) => m['id'] == aiMsgId);
@@ -227,6 +262,16 @@ class _LexiaScreenState extends State<LexiaScreen> {
     setState(() => _isSending = false);
     _scrollToBottom();
   }
+
+  bool _isExhausted(String toolId) {
+    final usage = _usages[toolId];
+    if (usage is! Map) return false;
+    final used = (usage['used'] ?? 0) as int;
+    final limit = (usage['limit'] ?? -1) as int;
+    return _isFree && limit != -1 && used >= limit;
+  }
+
+  bool get _isCurrentToolExhausted => _isExhausted(_selectedTool['id'] as String);
 
   void _openChat(String chatId) {
     setState(() {
@@ -254,6 +299,8 @@ class _LexiaScreenState extends State<LexiaScreen> {
     );
   }
 
+  // ── Tool Selector (matches web ToolSelector.jsx) ──
+
   void _showToolSelector() {
     showModalBottomSheet(
       context: context,
@@ -262,81 +309,372 @@ class _LexiaScreenState extends State<LexiaScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => Container(
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(width: 32, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 16),
-            const Text('Choose a Tool', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
-            const SizedBox(height: 4),
-            Text('Select a mode for Lexia AI', style: TextStyle(color: Colors.grey.shade600, fontSize: 12, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 16),
-            Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                children: List.generate(_TOOLS.length, (i) {
-                  final tool = _TOOLS[i];
-                  final isSelected = tool['id'] == _selectedTool['id'];
-                  final usage = _usages[tool['id']];
-                  final used = usage is Map ? (usage['used'] ?? 0) as int : 0;
-                  final limit = usage is Map ? (usage['limit'] ?? -1) : -1;
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() => _selectedTool = Map<String, dynamic>.from(tool));
-                      Navigator.pop(ctx);
-                    },
+      builder: (ctx) {
+        Map<String, dynamic>? toolUsage(String toolId) {
+          final u = _usages[toolId];
+          if (u is! Map) return null;
+          return {'used': u['used'] ?? 0, 'limit': u['limit'] ?? -1};
+        }
+
+        return Container(
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.8),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 32, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  _lexiaLogo(size: 20),
+                  const SizedBox(width: 8),
+                  const Text('Lexia Tools', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(ctx),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      margin: const EdgeInsets.only(bottom: 6),
-                      decoration: BoxDecoration(
-                        color: isSelected ? Colors.black : Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(14),
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
+                      child: Icon(Icons.close, size: 20, color: Colors.grey.shade600),
+                    ),
+                  ),
+                ],
+              ),
+              if (_isFree) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Free plan — some tools are limited. ',
+                          style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                        ),
                       ),
-                      child: Row(
-                        children: [
-                          Icon(tool['icon'] as IconData, color: isSelected ? Colors.white : Colors.black, size: 22),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(tool['label'] as String, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: isSelected ? Colors.white : Colors.black)),
-                                if (limit != -1)
-                                  Text('$used/$limit used', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: isSelected ? Colors.white70 : Colors.grey.shade500)),
-                              ],
-                            ),
+                      GestureDetector(
+                        onTap: () { Navigator.pop(ctx); _showFeaturesComparison(); },
+                        child: Text('See plans', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.black, decoration: TextDecoration.underline)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: List.generate(_TOOLS.length, (i) {
+                    final tool = _TOOLS[i];
+                    final isSelected = tool['id'] == _selectedTool['id'];
+                    final exhausted = _isFree && _isExhausted(tool['id'] as String);
+                    final usage = toolUsage(tool['id'] as String);
+                    final used = (usage?['used'] as int?) ?? 0;
+                    final limit = (usage?['limit'] as int?) ?? -1;
+
+                    return GestureDetector(
+                      onTap: () {
+                        if (exhausted) {
+                          Navigator.pop(ctx);
+                          _showFeaturesComparison();
+                          return;
+                        }
+                        setState(() => _selectedTool = Map<String, dynamic>.from(tool));
+                        Navigator.pop(ctx);
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isSelected ? Colors.black : Colors.transparent,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isSelected
+                                ? Colors.black
+                                : exhausted
+                                    ? Colors.grey.shade200
+                                    : Colors.grey.shade300,
                           ),
-                          if (limit == -1)
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              width: 36, height: 36,
                               decoration: BoxDecoration(
-                                color: isSelected ? Colors.white.withValues(alpha: 0.2) : Colors.orange.shade100,
-                                borderRadius: BorderRadius.circular(6),
+                                color: isSelected
+                                    ? Colors.white.withValues(alpha: 0.2)
+                                    : Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                              child: Text('∞', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: isSelected ? Colors.white : Colors.orange.shade700)),
+                              child: Icon(
+                                exhausted ? Icons.lock_outline : tool['icon'] as IconData,
+                                color: isSelected ? Colors.white : exhausted ? Colors.grey.shade400 : Colors.black,
+                                size: 20,
+                              ),
                             ),
-                          if (isSelected)
-                            const Icon(Icons.check, color: Colors.white, size: 20),
-                        ],
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        tool['label'] as String,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 14,
+                                          color: isSelected ? Colors.white : exhausted ? Colors.grey.shade400 : Colors.black,
+                                        ),
+                                      ),
+                                      if (exhausted) ...[
+                                        const SizedBox(width: 6),
+                                        Text('Used', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey.shade400)),
+                                      ],
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    exhausted ? 'Limit reached for this period' : tool['desc'] as String,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isSelected ? Colors.white70 : Colors.grey.shade500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (usage != null && !isSelected)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 8),
+                                child: Text(
+                                  limit == -1 ? '∞' : '$used/$limit',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: exhausted ? Colors.grey.shade400 : Colors.grey.shade500,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () { Navigator.pop(ctx); _showFeaturesComparison(); },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(14)),
+                  child: const Text(
+                    'Upgrade to Pro to unlock all features',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ── Features Comparison (matches web FeaturesComparison.jsx) ──
+
+  void _showFeaturesComparison() {
+    _loadUsages();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        String freeLabel(Map<String, dynamic> feature) {
+          if (feature['free'] == 'Not available') return 'Not available';
+          final toolId = feature['toolId'] as String?;
+          if (toolId == null) return feature['free'] as String;
+          final usage = _usages[toolId];
+          if (usage is! Map) return feature['free'] as String;
+          final limit = (usage['limit'] ?? -1) as int;
+          if (limit == -1) return feature['free'] as String;
+          final used = (usage['used'] ?? 0) as int;
+          final period = (usage['period'] ?? '') as String;
+          final periodLabel = period == 'daily' ? 'today' : period == 'weekly' ? 'this week' : 'this month';
+          return '$used/$limit $periodLabel';
+        }
+
+        bool isExhausted(Map<String, dynamic> feature) {
+          if (feature['free'] == 'Not available') return true;
+          final toolId = feature['toolId'] as String?;
+          if (toolId == null) return false;
+          return _isExhausted(toolId);
+        }
+
+        return Container(
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                ),
+                child: Row(
+                  children: [
+                    const Text('Lexia Features', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
+                        child: Icon(Icons.close, size: 20, color: Colors.grey.shade600),
                       ),
                     ),
-                  );
-                }),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
-      ),
+              Flexible(
+                child: ListView(
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(flex: 3, child: SizedBox()),
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            children: [
+                              Text('FREE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.grey.shade500, letterSpacing: 1)),
+                              const Text('₹0', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 22)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            children: [
+                              Text('PRO', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.grey.shade700, letterSpacing: 1)),
+                              const Text('Paid', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 22)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    ...List.generate(_FEATURES.length, (i) {
+                      final feature = _FEATURES[i];
+                      final exhausted = isExhausted(feature);
+                      final label = freeLabel(feature);
+                      final isNotAvail = feature['free'] == 'Not available';
+
+                      return Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          border: i < _FEATURES.length - 1
+                              ? Border(bottom: BorderSide(color: Colors.grey.shade100))
+                              : null,
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: Text(feature['name'] as String, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: isNotAvail
+                                      ? Colors.grey.shade100
+                                      : exhausted
+                                          ? Colors.grey.shade200
+                                          : Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  label,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: isNotAvail || exhausted ? Colors.grey.shade500 : Colors.black,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 2,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.black,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  feature['paid'] as String,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 20),
+                    GestureDetector(
+                      onTap: () { /* Navigate to payments */ },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(14)),
+                        child: const Text(
+                          'Upgrade to Pro',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _lexiaLogo({double size = 18}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(size * 0.3),
+      child: Image.asset('assets/images/Lexia.webp', width: size, height: size, fit: BoxFit.cover),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isExhausted = _isToolExhausted();
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -344,19 +682,11 @@ class _LexiaScreenState extends State<LexiaScreen> {
           children: [
             _buildHeader(),
             Expanded(child: _buildBody()),
-            _buildInputBar(isExhausted),
+            _buildInputBar(),
           ],
         ),
       ),
     );
-  }
-
-  bool _isToolExhausted() {
-    final usage = _usages[_selectedTool['id']];
-    if (usage is! Map) return false;
-    final used = (usage['used'] ?? 0) as int;
-    final limit = (usage['limit'] ?? -1) as int;
-    return limit != -1 && used >= limit;
   }
 
   Widget _buildHeader() {
@@ -371,7 +701,7 @@ class _LexiaScreenState extends State<LexiaScreen> {
           Container(
             width: 32, height: 32,
             decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(10)),
-            child: const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
+            child: _lexiaLogo(size: 18),
           ),
           const SizedBox(width: 10),
           const Text('Lexia AI', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
@@ -426,7 +756,7 @@ class _LexiaScreenState extends State<LexiaScreen> {
           Container(
             width: 56, height: 56,
             decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(16)),
-            child: const Icon(Icons.auto_awesome, color: Colors.white, size: 28),
+            child: _lexiaLogo(size: 28),
           ),
           const SizedBox(height: 20),
           const Text('Lexia AI Tutor', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 22)),
@@ -476,7 +806,7 @@ class _LexiaScreenState extends State<LexiaScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.auto_awesome, size: 40, color: Colors.black),
+          _lexiaLogo(size: 40),
           const SizedBox(height: 16),
           const Text('Ask me anything about CLAT', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
           const SizedBox(height: 8),
@@ -514,9 +844,9 @@ class _LexiaScreenState extends State<LexiaScreen> {
         Flexible(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: Colors.black,
-              borderRadius: const BorderRadius.only(
+              borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
                 bottomLeft: Radius.circular(16),
@@ -600,7 +930,9 @@ class _LexiaScreenState extends State<LexiaScreen> {
     );
   }
 
-  Widget _buildInputBar(bool isExhausted) {
+  Widget _buildInputBar() {
+    final exhausted = _isCurrentToolExhausted;
+
     return Container(
       padding: EdgeInsets.fromLTRB(12, 8, 12, MediaQuery.of(context).padding.bottom + 8),
       decoration: BoxDecoration(
@@ -616,20 +948,36 @@ class _LexiaScreenState extends State<LexiaScreen> {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: exhausted ? Colors.red.shade50 : Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.grey.shade300),
+                border: Border.all(color: exhausted ? Colors.red.shade200 : Colors.grey.shade300),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.auto_awesome, size: 14, color: Colors.grey.shade700),
+                  _lexiaLogo(size: 14),
                   const SizedBox(width: 6),
-                  Text('Using: ${_selectedTool['label']}', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Colors.grey.shade700)),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () => setState(() => _selectedTool = Map<String, dynamic>.from(_DEFAULT_TOOL)),
-                    child: Icon(Icons.close, size: 16, color: Colors.grey.shade500),
+                  Expanded(
+                    child: Text(
+                      exhausted
+                          ? '${_selectedTool['label']} — Limit exhausted. Tap to upgrade.'
+                          : 'Using: ${_selectedTool['label']}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                        color: exhausted ? Colors.red.shade600 : Colors.grey.shade700,
+                      ),
+                    ),
                   ),
+                  if (exhausted)
+                    GestureDetector(
+                      onTap: () => _showFeaturesComparison(),
+                      child: Text('Upgrade', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.red.shade700, decoration: TextDecoration.underline)),
+                    )
+                  else
+                    GestureDetector(
+                      onTap: () => setState(() => _selectedTool = Map<String, dynamic>.from(_DEFAULT_TOOL)),
+                      child: Icon(Icons.close, size: 16, color: Colors.grey.shade500),
+                    ),
                 ],
               ),
             ),
@@ -650,12 +998,12 @@ class _LexiaScreenState extends State<LexiaScreen> {
               Expanded(
                 child: TextField(
                   controller: _inputController,
-                  enabled: !isExhausted,
+                  enabled: !exhausted,
                   textCapitalization: TextCapitalization.sentences,
                   minLines: 1,
                   maxLines: 5,
                   decoration: InputDecoration(
-                    hintText: isExhausted ? 'Limit exhausted' : 'Ask Lexia...',
+                    hintText: exhausted ? 'Limit exhausted — upgrade to continue' : 'Ask Lexia...',
                     hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.w500),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),

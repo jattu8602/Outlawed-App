@@ -51,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Widget> pages = [
       HomeTab(userData: widget.userData),
       TestsScreen(authService: widget.authService),
-      LexiaScreen(authService: widget.authService),
+      LexiaScreen(authService: widget.authService, userData: widget.userData),
       LeaderboardScreen(authService: widget.authService),
       ProfileScreen(userData: widget.userData, authService: widget.authService),
     ];

@@ -40,6 +40,16 @@ class AuthService {
   // Await this to ensure service is ready (cookies loaded)
   Future<void> get ready => _initCompleter.future;
 
+  String? _pendingReferralCode;
+
+  void setReferralCode(String code) {
+    _pendingReferralCode = code;
+  }
+
+  void clearReferralCode() {
+    _pendingReferralCode = null;
+  }
+
   // Sign in with Google and exchange token
   Future<Map<String, dynamic>?> signIn() async {
     try {
@@ -57,9 +67,15 @@ class AuthService {
       }
 
       // 2. Exchange Token with Backend
+      final body = <String, dynamic>{'idToken': idToken};
+      if (_pendingReferralCode != null) {
+        body['referralCode'] = _pendingReferralCode;
+        _pendingReferralCode = null;
+      }
+
       final Response response = await _dio.post(
         ApiConstants.mobileLoginEndpoint,
-        data: {'idToken': idToken},
+        data: body,
         options: Options(
           headers: {
             'Content-Type': 'application/json',

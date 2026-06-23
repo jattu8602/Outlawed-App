@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'shiny_coin.dart';
 
 class ReferEarnCapsule extends StatefulWidget {
-  const ReferEarnCapsule({super.key});
+  final VoidCallback? onTap;
+
+  const ReferEarnCapsule({super.key, this.onTap});
 
   @override
   State<ReferEarnCapsule> createState() => _ReferEarnCapsuleState();
@@ -38,15 +40,17 @@ class _ReferEarnCapsuleState extends State<ReferEarnCapsule> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      padding: const EdgeInsets.only(left: 4, right: 12, top: 4, bottom: 4),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        padding: const EdgeInsets.only(left: 4, right: 12, top: 4, bottom: 4),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           const ShinyCoin(),
@@ -97,8 +101,11 @@ class _ReferEarnCapsuleState extends State<ReferEarnCapsule> {
               ),
             ),
           ),
-        ],
+          ],
+        ),
+      ),
       ),
     );
   }
+}
 }

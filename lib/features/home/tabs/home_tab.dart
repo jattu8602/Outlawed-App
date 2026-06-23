@@ -7,6 +7,7 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/constants/api_constants.dart';
 import '../widgets/refer_earn_capsule.dart';
 import '../screens/streak_history_screen.dart';
+import '../../refer/refer_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/data/lexia_quotes.dart';
 
@@ -137,7 +138,16 @@ class _HomeTabState extends State<HomeTab> {
           Row(
             children: [
               // Refer & Earn Capsule
-              const ReferEarnCapsule(),
+              ReferEarnCapsule(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ReferScreen(authService: widget.authService),
+                    ),
+                  );
+                },
+              ),
               const SizedBox(width: 8),
               // Group Button
               Container(

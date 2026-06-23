@@ -12,6 +12,8 @@ class ApiConstants {
 
   // User Endpoints
   static const String userStreakEndpoint = '$apiPrefix/user/streak';
+  static const String generateReferralEndpoint = '$apiPrefix/user/generate-referral';
+  static const String referralStatsEndpoint = '$apiPrefix/user/referrals';
 
   // Helper to get full API URL
   static String get fullApiUrl => '$baseUrl$apiPrefix';

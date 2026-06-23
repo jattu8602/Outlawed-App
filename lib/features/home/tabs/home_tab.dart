@@ -333,80 +333,59 @@ class _HomeTabState extends State<HomeTab> {
             ),
             const SizedBox(height: 20),
             // 7-Day Streak Marker
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0D1B2A), // Dark bluish
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white.withOpacity(0.05)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Weekly Progress',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const StreakHistoryScreen()),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0D1B2A), // Dark bluish
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Weekly Progress',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                      Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const StreakHistoryScreen()),
-                              );
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                              ),
-                              child: const Text(
-                                'more',
-                                style: TextStyle(
-                                  color: Colors.blue,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
+                        Text(
+                           _isStreakActive ? 'On Fire! 🔥' : 'Inactive',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _isStreakActive ? Colors.orange : Colors.white38,
+                            fontWeight: FontWeight.bold,
                           ),
-                          const SizedBox(width: 12),
-                          Text(
-                             _isStreakActive ? 'On Fire! 🔥' : 'Inactive',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: _isStreakActive ? Colors.orange : Colors.white38,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildStreakDay('M', isCompleted: true),
-                      _buildStreakDay('T', isCompleted: true),
-                      _buildStreakDay('W', isMissed: true),
-                      _buildStreakDay('T', isCompleted: true),
-                      _buildStreakDay('F', isCompleted: false),
-                      _buildStreakDay('S', isCompleted: false),
-                      _buildStreakDay('S', isCompleted: false),
-                    ],
-                  ),
-                ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildStreakDay('M', isCompleted: true),
+                        _buildStreakDay('T', isCompleted: true),
+                        _buildStreakDay('W', isMissed: true),
+                        _buildStreakDay('T', isCompleted: true),
+                        _buildStreakDay('F', isCompleted: false),
+                        _buildStreakDay('S', isCompleted: false),
+                        _buildStreakDay('S', isCompleted: false),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 12),

@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../core/services/auth_service.dart';
 import '../auth/login_page.dart';
 import '../payments/payment_guard.dart';
+import './screens/test_attempt_screen.dart';
 import './services/test_service.dart';
 import './models/test_models.dart';
 
@@ -572,7 +573,17 @@ class _TestsScreenState extends State<TestsScreen> {
                 ),
                 const SizedBox(width: 16),
                 GestureDetector(
-                  onTap: () {}, // Navigate to analysis
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => TestAttemptScreen(
+                          authService: widget.authService,
+                          testId: test.id,
+                        ),
+                      ),
+                    );
+                  },
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
@@ -586,7 +597,17 @@ class _TestsScreenState extends State<TestsScreen> {
             )
           else
             GestureDetector(
-              onTap: () {}, // Navigate to test
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => TestAttemptScreen(
+                      authService: widget.authService,
+                      testId: test.id,
+                    ),
+                  ),
+                );
+              },
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: const BoxDecoration(

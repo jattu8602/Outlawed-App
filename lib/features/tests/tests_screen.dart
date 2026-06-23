@@ -68,6 +68,14 @@ class _TestsScreenState extends State<TestsScreen> {
   }
 
   Future<void> _fetchTests() async {
+    if (_selectedExam.name != 'CLAT') {
+      setState(() {
+        _isLoading = false;
+        _error = null;
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _error = null;
@@ -332,40 +340,120 @@ class _TestsScreenState extends State<TestsScreen> {
                           ],
                         ),
                       )
-                    : _filteredTests.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.description_outlined, size: 64, color: Colors.grey.shade300),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'No ${_selectedTab.toLowerCase()} tests found for ${_selectedExam.name}',
-                                  style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+                    : _selectedExam.name != 'CLAT'
+                        ? _buildComingSoon()
+                        : _filteredTests.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.description_outlined, size: 64, color: Colors.grey.shade300),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'No ${_selectedTab.toLowerCase()} tests found for ${_selectedExam.name}',
+                                      style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          )
-                        : RefreshIndicator(
-                            onRefresh: _fetchTests,
-                            color: Colors.black,
-                            child: ListView.separated(
-                              padding: EdgeInsets.zero,
-                              itemCount: _filteredTests.length,
-                              separatorBuilder: (context, index) => Divider(
-                                height: 1,
-                                thickness: 1,
-                                color: Colors.grey.shade100,
-                                indent: 20,
-                                endIndent: 20,
+                              )
+                            : RefreshIndicator(
+                                onRefresh: _fetchTests,
+                                color: Colors.black,
+                                child: ListView.separated(
+                                  padding: EdgeInsets.zero,
+                                  itemCount: _filteredTests.length,
+                                  separatorBuilder: (context, index) => Divider(
+                                    height: 1,
+                                    thickness: 1,
+                                    color: Colors.grey.shade100,
+                                    indent: 20,
+                                    endIndent: 20,
+                                  ),
+                                  itemBuilder: (context, index) {
+                                    return _buildTestStrip(_filteredTests[index]);
+                                  },
+                                ),
                               ),
-                              itemBuilder: (context, index) {
-                                return _buildTestStrip(_filteredTests[index]);
-                              },
-                            ),
-                          ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildComingSoon() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: _selectedExam.themeColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  _selectedExam.logoPath,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              _selectedExam.name,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: _selectedExam.themeColor,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Coming Soon',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+                color: Colors.black,
+                letterSpacing: 2,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'We\'re working hard to bring you ${_selectedExam.name} practice tests. Stay tuned!',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 32),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.mail_outline, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 8),
+                  Text(
+                    'You\'ll be notified when tests are available',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

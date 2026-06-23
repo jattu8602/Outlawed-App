@@ -23,4 +23,12 @@ class ApiConstants {
   static const String premiumTestsEndpoint = '$apiPrefix/tests/premium';
   static String testDetailEndpoint(String id) => '$apiPrefix/tests/$id';
   static String testSubmitEndpoint(String id) => '$apiPrefix/tests/$id/submit';
+
+  // Payment Endpoints
+  static const String paymentPlansEndpoint = '$apiPrefix/payment-plans';
+  static const String createOrderEndpoint = '$apiPrefix/payments/create-order';
+  static const String verifyPaymentEndpoint = '$apiPrefix/payments/verify';
+  static const String razorpayKeyEndpoint = '$apiPrefix/payments/razorpay-key';
+  static const String userPaymentsEndpoint = '$apiPrefix/user/payments';
+  static const String userStatusEndpoint = '$apiPrefix/user/status';
 }

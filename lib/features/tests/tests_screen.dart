@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../../core/services/auth_service.dart';
 import '../auth/login_page.dart';
+import '../payments/payment_guard.dart';
 import './services/test_service.dart';
 import './models/test_models.dart';
 
@@ -19,7 +20,8 @@ class ExamOption {
 
 class TestsScreen extends StatefulWidget {
   final AuthService authService;
-  const TestsScreen({super.key, required this.authService});
+  final Map<String, dynamic> userData;
+  const TestsScreen({super.key, required this.authService, required this.userData});
 
   @override
   State<TestsScreen> createState() => _TestsScreenState();
@@ -459,7 +461,8 @@ class _TestsScreenState extends State<TestsScreen> {
   }
 
   Widget _buildTestStrip(TestModel test) {
-    const bool isUserPaid = false;
+    final user = widget.userData['user'] as Map<String, dynamic>?;
+    final bool isUserPaid = user?['role'] == 'PAID' || user?['role'] == 'ADMIN';
 
     return Container(
       width: double.infinity,
@@ -530,13 +533,16 @@ class _TestsScreenState extends State<TestsScreen> {
           ),
           const SizedBox(width: 16),
           if (test.isPaid && !isUserPaid)
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                shape: BoxShape.circle,
+            GestureDetector(
+              onTap: () => showPaywallSheet(context, widget.authService),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.lock_rounded, size: 18, color: Colors.grey),
               ),
-              child: const Icon(Icons.lock_rounded, size: 18, color: Colors.grey),
             )
           else if (test.isAttempted)
             Row(

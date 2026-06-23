@@ -10,6 +10,9 @@ class ApiConstants {
   // Auth Endpoints
   static const String mobileLoginEndpoint = '$apiPrefix/auth/mobile-login';
 
+  // User Endpoints
+  static const String userStreakEndpoint = '$apiPrefix/user/streak';
+
   // Helper to get full API URL
   static String get fullApiUrl => '$baseUrl$apiPrefix';
 

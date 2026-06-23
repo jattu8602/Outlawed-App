@@ -95,8 +95,12 @@ class AuthService {
         return response.data;
       }
       return null;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        await _cookieJar.deleteAll();
+      }
+      return null;
     } catch (e) {
-      print('Get user check failed (likely no session): $e');
       return null;
     }
   }

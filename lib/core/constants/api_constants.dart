@@ -1,7 +1,7 @@
 class ApiConstants {
   // Base URL for the hosted platform
-  // static const String baseUrl = 'https://www.outlawed.in';
-  static const String baseUrl = 'http://localhost:3000';
+  static const String baseUrl = 'https://www.outlawed.in';
+  // static const String baseUrl = 'http://localhost:3000';
   // static const String baseUrl = 'http://10.234.59.180:3000';
 
   // API Prefix

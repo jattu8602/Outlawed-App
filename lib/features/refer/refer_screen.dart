@@ -17,8 +17,6 @@ class _ReferScreenState extends State<ReferScreen> {
   String? _referralCode;
   Map<String, dynamic>? _stats;
   bool _isLoading = true;
-  bool _isGenerating = false;
-
   @override
   void initState() {
     super.initState();
@@ -66,10 +64,8 @@ class _ReferScreenState extends State<ReferScreen> {
   }
 
   Future<void> _shareLink() async {
-    await SharePlus.instance.share(
-      ShareParams(
-        text: 'Join OUTLAWED and ace your CLAT preparation! Use my referral link: $_referralLink',
-      ),
+    await Share.share(
+      'Join OUTLAWED and ace your CLAT preparation! Use my referral link: $_referralLink',
     );
   }
 
@@ -406,38 +402,39 @@ class _ReferScreenState extends State<ReferScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        recent.isEmpty
-            ? Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey[200]!),
+        if (recent.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.people_outline,
+                    size: 40, color: Colors.grey[400]),
+                const SizedBox(height: 8),
+                Text(
+                  'No referrals yet',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                child: Column(
-                  children: [
-                    Icon(Icons.people_outline,
-                        size: 40, color: Colors.grey[400]),
-                    const SizedBox(height: 8),
-                    Text(
-                      'No referrals yet',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Text(
-                      'Share your code to get started!',
-                      style: TextStyle(
-                        color: Colors.grey[400],
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
+                Text(
+                  'Share your code to get started!',
+                  style: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: 12,
+                  ),
                 ),
-              )
-            : ...recent.map((r) => _buildReferralItem(r)),
+              ],
+            ),
+          )
+        else
+          ...recent.map((r) => _buildReferralItem(r)),
       ],
     );
   }

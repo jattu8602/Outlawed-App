@@ -51,61 +51,59 @@ class _ReferEarnCapsuleState extends State<ReferEarnCapsule> {
           border: Border.all(color: Colors.grey.shade200),
         ),
         child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const ShinyCoin(),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 40,
-            height: 20,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              transitionBuilder: (Widget child, Animation<double> animation) {
-                final inAnimation = Tween<Offset>(
-                  begin: const Offset(0.0, 1.0),
-                  end: Offset.zero,
-                ).animate(animation);
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ShinyCoin(),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 40,
+              height: 20,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  final inAnimation = Tween<Offset>(
+                    begin: const Offset(0.0, 1.0),
+                    end: Offset.zero,
+                  ).animate(animation);
 
-                final outAnimation = Tween<Offset>(
-                  begin: const Offset(0.0, -1.0),
-                  end: Offset.zero,
-                ).animate(animation);
+                  final outAnimation = Tween<Offset>(
+                    begin: const Offset(0.0, -1.0),
+                    end: Offset.zero,
+                  ).animate(animation);
 
-                if (child.key == ValueKey(_texts[_currentIndex])) {
-                   return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: inAnimation,
-                      child: child,
-                    ),
-                  );
-                } else {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: outAnimation,
-                      child: child,
-                    ),
-                  );
-                }
-              },
-              child: Text(
-                _texts[_currentIndex],
-                key: ValueKey<String>(_texts[_currentIndex]),
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
-                  height: 1.0,
+                  if (child.key == ValueKey(_texts[_currentIndex])) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: inAnimation,
+                        child: child,
+                      ),
+                    );
+                  } else {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: outAnimation,
+                        child: child,
+                      ),
+                    );
+                  }
+                },
+                child: Text(
+                  _texts[_currentIndex],
+                  key: ValueKey<String>(_texts[_currentIndex]),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                    height: 1.0,
+                  ),
                 ),
               ),
             ),
-          ),
           ],
         ),
       ),
-      ),
     );
   }
-}
 }

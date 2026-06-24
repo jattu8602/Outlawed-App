@@ -8,6 +8,7 @@ import '../../../core/constants/api_constants.dart';
 import '../widgets/refer_earn_capsule.dart';
 import '../screens/streak_history_screen.dart';
 import '../../refer/refer_screen.dart';
+import '../../group/group_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/data/lexia_quotes.dart';
 
@@ -160,7 +161,15 @@ class _HomeTabState extends State<HomeTab> {
                 child: IconButton(
                   padding: EdgeInsets.zero,
                   onPressed: () {
-                    // Navigate to Groups (placeholder)
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => GroupScreen(
+                          authService: widget.authService,
+                          userData: widget.userData,
+                        ),
+                      ),
+                    );
                   },
                   icon: const Icon(
                     Icons.groups_outlined,

@@ -4,6 +4,7 @@ import 'tabs/home_tab.dart';
 import '../tests/tests_screen.dart';
 import '../lexia/lexia_screen.dart';
 import '../leaderboard/leaderboard_screen.dart';
+import '../group/group_screen.dart';
 import '../profile/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {

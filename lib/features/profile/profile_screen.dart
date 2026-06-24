@@ -78,7 +78,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: const BackButton(color: Colors.white),
+        leading: const SizedBox.shrink(),
         actions: [
           IconButton(
             icon: const Icon(Icons.share_outlined, color: Colors.white),

@@ -32,4 +32,15 @@ class ApiConstants {
   static const String razorpayKeyEndpoint = '$apiPrefix/payments/razorpay-key';
   static const String userPaymentsEndpoint = '$apiPrefix/user/payments';
   static const String userStatusEndpoint = '$apiPrefix/user/status';
+
+  // Group Endpoints
+  static const String groupsEndpoint = '$apiPrefix/groups';
+  static String groupDetailEndpoint(String id) => '$apiPrefix/groups/$id';
+  static String groupJoinEndpoint(String id) => '$apiPrefix/groups/$id/join';
+  static String groupLeaveEndpoint(String id) => '$apiPrefix/groups/$id/leave';
+  static String groupChatEndpoint(String id) => '$apiPrefix/groups/$id/chat';
+  static String groupLeaderboardEndpoint(String id) => '$apiPrefix/groups/$id/leaderboard';
+  static String groupSettingsEndpoint(String id) => '$apiPrefix/groups/$id/settings';
+  static String groupTagsEndpoint(String id) => '$apiPrefix/groups/$id/tags';
+  static String groupMembersEndpoint(String id) => '$apiPrefix/groups/$id/members';
 }

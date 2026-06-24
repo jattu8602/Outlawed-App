@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/constants/api_constants.dart';
+import '../payments/payment_guard.dart';
 import 'lexia_chats_screen.dart';
 
 final _TOOLS = [
@@ -661,7 +662,7 @@ class _LexiaScreenState extends State<LexiaScreen> {
                     }),
                     const SizedBox(height: 20),
                     GestureDetector(
-                      onTap: () { /* Navigate to payments */ },
+                      onTap: () => navigateToSubscription(context, widget.authService),
                       child: Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 14),

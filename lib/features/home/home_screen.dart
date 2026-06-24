@@ -49,8 +49,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
-      HomeTab(userData: widget.userData),
-      TestsScreen(authService: widget.authService),
+      HomeTab(userData: widget.userData, authService: widget.authService),
+      TestsScreen(authService: widget.authService, userData: widget.userData),
       LexiaScreen(authService: widget.authService, userData: widget.userData),
       LeaderboardScreen(authService: widget.authService),
       ProfileScreen(userData: widget.userData, authService: widget.authService),

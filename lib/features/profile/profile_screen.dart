@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import '../../core/services/auth_service.dart';
 import '../auth/login_page.dart';
+import '../payments/subscription_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   final Map<String, dynamic> userData;
@@ -178,7 +179,14 @@ class ProfileScreen extends StatelessWidget {
             const SizedBox(height: 32),
 
             // Menu Options
-            _buildMenuItem(Icons.workspace_premium_outlined, 'Subscription', 'Upgrade to Premium'),
+            _buildMenuItem(Icons.workspace_premium_outlined, 'Subscription', role == 'PAID' ? 'You are Pro' : 'Upgrade to Premium', onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SubscriptionScreen(authService: authService),
+                ),
+              );
+            }),
             _buildMenuItem(Icons.history, 'Test History', ''),
             _buildMenuItem(Icons.settings_outlined, 'Settings', ''),
             _buildMenuItem(Icons.help_outline, 'Help & Support', ''),
@@ -249,7 +257,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuItem(IconData icon, String title, String subtitle) {
+  Widget _buildMenuItem(IconData icon, String title, String subtitle, {VoidCallback? onTap}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8),
       child: ListTile(
@@ -274,7 +282,7 @@ class ProfileScreen extends StatelessWidget {
         ),
         subtitle: subtitle.isNotEmpty ? Text(subtitle, style: const TextStyle(fontSize: 12)) : null,
         trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-        onTap: () {},
+        onTap: onTap,
       ),
     );
   }

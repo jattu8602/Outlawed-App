@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/services/auth_service.dart';
+import 'core/services/deep_link_service.dart';
 import 'features/auth/login_page.dart';
 import 'features/home/home_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
@@ -22,11 +23,14 @@ class _MyAppState extends State<MyApp> {
   bool? _hasSeenOnboarding;
   Map<String, dynamic>? _userData;
   final AuthService _authService = AuthService();
+  late final DeepLinkService _deepLinkService;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    _deepLinkService = DeepLinkService(_authService);
+    _deepLinkService.init();
     _checkAppState();
   }
 
@@ -79,7 +83,7 @@ class _MyAppState extends State<MyApp> {
           ? const OnboardingScreen()
           : (_userData != null
               ? HomeScreen(userData: _userData!, authService: _authService)
-              : const LoginPage()),
+              : LoginPage(authService: _authService)),
     );
   }
 }

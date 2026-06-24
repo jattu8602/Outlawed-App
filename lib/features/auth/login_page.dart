@@ -4,16 +4,24 @@ import '../../core/services/auth_service.dart';
 import '../home/home_screen.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final AuthService? authService;
+
+  const LoginPage({super.key, this.authService});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final AuthService _authService = AuthService();
+  late final AuthService _authService;
   bool _isLoading = false;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _authService = widget.authService ?? AuthService();
+  }
 
   Future<void> _handleGoogleSignIn() async {
     setState(() {

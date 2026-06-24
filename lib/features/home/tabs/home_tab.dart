@@ -3,22 +3,26 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import '../../../core/widgets/app_logo.dart';
+import '../../../core/services/auth_service.dart';
+import '../../../core/constants/api_constants.dart';
 import '../widgets/refer_earn_capsule.dart';
 import '../screens/streak_history_screen.dart';
+import '../../refer/refer_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/data/lexia_quotes.dart';
 
 class HomeTab extends StatefulWidget {
   final Map<String, dynamic> userData;
+  final AuthService authService;
 
-  const HomeTab({super.key, required this.userData});
+  const HomeTab({super.key, required this.userData, required this.authService});
 
   @override
   State<HomeTab> createState() => _HomeTabState();
 }
 
 class _HomeTabState extends State<HomeTab> {
-  bool _isStreakActive = false; // Toggle this to test both states
+  Map<String, dynamic>? _streakData;
 
   void _showStreakInfo() {
     showDialog(
@@ -87,6 +91,35 @@ class _HomeTabState extends State<HomeTab> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _fetchStreakData();
+  }
+
+  Future<void> _fetchStreakData() async {
+    try {
+      final response = await widget.authService.client.get(
+        ApiConstants.userStreakEndpoint,
+      );
+      if (mounted) {
+        setState(() {
+          _streakData = response.data;
+        });
+      }
+    } catch (_) {
+      // Streak defaults to inactive on error
+    }
+  }
+
+  bool get _streakActive => _streakData?['isOngoing'] == true;
+
+  int get _streakCurrent => _streakData?['currentStreak'] ?? 0;
+
+  int get _streakPeak => _streakData?['peakStreak'] ?? 0;
+
+  List get _last7Days => _streakData?['last7Days'] ?? [];
+
+  @override
   Widget build(BuildContext context) {
     final user = widget.userData['user'] ?? {};
     final String name = user['name'] ?? 'User';
@@ -105,7 +138,16 @@ class _HomeTabState extends State<HomeTab> {
           Row(
             children: [
               // Refer & Earn Capsule
-              const ReferEarnCapsule(),
+              ReferEarnCapsule(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ReferScreen(authService: widget.authService),
+                    ),
+                  );
+                },
+              ),
               const SizedBox(width: 8),
               // Group Button
               Container(
@@ -164,14 +206,15 @@ class _HomeTabState extends State<HomeTab> {
                   Expanded(
                     child: GestureDetector(
                       onTap: () {
-                        setState(() {
-                          _isStreakActive = !_isStreakActive;
-                        });
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const StreakHistoryScreen()),
+                        );
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 20),
                         decoration: BoxDecoration(
-                          gradient: _isStreakActive
+                          gradient: _streakActive
                               ? LinearGradient(
                                   colors: [Colors.orange.shade300, Colors.orange.shade500],
                                   begin: Alignment.topLeft,
@@ -183,7 +226,7 @@ class _HomeTabState extends State<HomeTab> {
                                   end: Alignment.bottomRight,
                                 ),
                           borderRadius: BorderRadius.circular(24),
-                          boxShadow: _isStreakActive
+                          boxShadow: _streakActive
                               ? [
                                   BoxShadow(
                                     color: Colors.orange.withOpacity(0.2),
@@ -200,9 +243,9 @@ class _HomeTabState extends State<HomeTab> {
                               top: 12,
                               left: 20,
                               child: Text(
-                                '4/10',
+                                '${_streakCurrent}/${_streakPeak}',
                                 style: TextStyle(
-                                  color: _isStreakActive
+                                  color: _streakActive
                                       ? Colors.white
                                       : Colors.blueGrey.shade400,
                                   fontSize: 48,
@@ -214,7 +257,7 @@ class _HomeTabState extends State<HomeTab> {
                             // Fire Logo: Expanded and Shifted Bottom
                             Align(
                               alignment: const Alignment(0, 1.0),
-                              child: _isStreakActive
+                              child: _streakActive
                                   ? Lottie.asset(
                                       'assets/animations/fire.json',
                                       width: 180,
@@ -333,80 +376,59 @@ class _HomeTabState extends State<HomeTab> {
             ),
             const SizedBox(height: 20),
             // 7-Day Streak Marker
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0D1B2A), // Dark bluish
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white.withOpacity(0.05)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Weekly Progress',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const StreakHistoryScreen()),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0D1B2A), // Dark bluish
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Weekly Progress',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                      Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const StreakHistoryScreen()),
-                              );
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                              ),
-                              child: const Text(
-                                'more',
-                                style: TextStyle(
-                                  color: Colors.blue,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
+                        Text(
+                           _streakActive ? 'On Fire! 🔥' : 'Inactive',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _streakActive ? Colors.orange : Colors.white38,
+                            fontWeight: FontWeight.bold,
                           ),
-                          const SizedBox(width: 12),
-                          Text(
-                             _isStreakActive ? 'On Fire! 🔥' : 'Inactive',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: _isStreakActive ? Colors.orange : Colors.white38,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildStreakDay('M', isCompleted: true),
-                      _buildStreakDay('T', isCompleted: true),
-                      _buildStreakDay('W', isMissed: true),
-                      _buildStreakDay('T', isCompleted: true),
-                      _buildStreakDay('F', isCompleted: false),
-                      _buildStreakDay('S', isCompleted: false),
-                      _buildStreakDay('S', isCompleted: false),
-                    ],
-                  ),
-                ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: _last7Days.isEmpty
+                          ? List.generate(7, (i) => _buildStreakDay('', isCompleted: false))
+                          : _last7Days.map<Widget>((day) {
+                              final label = (day['dayName'] as String?)?.isNotEmpty == true
+                                  ? (day['dayName'] as String).substring(0, 1)
+                                  : '';
+                              final active = day['active'] == true;
+                              return _buildStreakDay(label, isCompleted: active);
+                            }).toList(),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 12),

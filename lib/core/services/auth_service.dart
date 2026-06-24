@@ -5,6 +5,8 @@ import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:play_install_referrer/play_install_referrer.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/api_constants.dart';
 
 class AuthService {
@@ -25,6 +27,7 @@ class AuthService {
       receiveTimeout: const Duration(seconds: 10),
     ));
     _initCookieJar();
+    _checkInstallReferrer();
   }
 
   Future<void> _initCookieJar() async {
@@ -48,6 +51,26 @@ class AuthService {
 
   void clearReferralCode() {
     _pendingReferralCode = null;
+  }
+
+  Future<void> _checkInstallReferrer() async {
+    try {
+      if (Platform.isIOS) return;
+      final ReferrerDetails details = await PlayInstallReferrer.installReferrer;
+      final referrerUrl = details.installReferrer;
+      if (referrerUrl == null || referrerUrl.isEmpty) return;
+
+      final uri = Uri.parse(referrerUrl);
+      final code = uri.queryParameters['ref'];
+      if (code != null && code.isNotEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        final alreadyProcessed = prefs.getBool('referrer_processed') ?? false;
+        if (!alreadyProcessed) {
+          _pendingReferralCode = code;
+          await prefs.setBool('referrer_processed', true);
+        }
+      }
+    } catch (_) {}
   }
 
   // Sign in with Google and exchange token

@@ -92,6 +92,7 @@ class PaymentService {
       'name': 'OUTLAWED',
       'description': 'Payment for $planName',
       'order_id': orderId,
+      'image': 'https://ik.imagekit.io/outlawed/app-assets/outlawed_logo_4AyLumErg.png',
       'prefill': {
         'contact': contact ?? '',
         'email': email ?? '',

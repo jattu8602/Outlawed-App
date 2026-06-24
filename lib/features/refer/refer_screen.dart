@@ -51,11 +51,14 @@ class _ReferScreenState extends State<ReferScreen> {
     } catch (_) {}
   }
 
-  String get _referralLink =>
-      'https://www.outlawed.in?ref=$_referralCode';
+  String get _playStoreReferrerLink =>
+      'https://play.google.com/store/apps/details?id=com.outlawed.app&referrer=ref%3D$_referralCode';
+
+  String get _deepLink =>
+      'https://www.outlawed.in/download?ref=$_referralCode';
 
   Future<void> _copyLink() async {
-    await Clipboard.setData(ClipboardData(text: _referralLink));
+    await Clipboard.setData(ClipboardData(text: _deepLink));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Referral link copied!')),
@@ -65,7 +68,9 @@ class _ReferScreenState extends State<ReferScreen> {
 
   Future<void> _shareLink() async {
     await Share.share(
-      'Join OUTLAWED and ace your CLAT preparation! Use my referral link: $_referralLink',
+      'Download OUTLAWED and ace your CLAT preparation!\n\n'
+      'Use my referral link to get started:\n$_playStoreReferrerLink\n\n'
+      'If the link doesn\'t work, download from Play Store and enter my referral code: $_referralCode',
     );
   }
 

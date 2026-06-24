@@ -23,6 +23,8 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
 
   bool _loading = true;
   String? _error;
+  String? _attemptId;
+  bool _startingTest = false;
 
   Map<String, dynamic>? _test;
   List<dynamic> _questions = [];
@@ -78,15 +80,40 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
     }
   }
 
-  void _startTest() {
-    setState(() { _isStarted = true; });
-    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (_timeRemaining <= 1) {
-        t.cancel();
-        _autoSubmit();
+  Future<void> _startTest() async {
+    if (_startingTest) return;
+    setState(() { _startingTest = true; });
+
+    try {
+      final res = await _dio.post(ApiConstants.testAttemptsEndpoint(widget.testId), data: {});
+      if (res.data != null && res.data['attempt'] != null) {
+        _attemptId = res.data['attempt']['id'] as String?;
       }
-      setState(() => _timeRemaining--);
-    });
+    } catch (e) {
+      if (mounted) {
+        setState(() { _startingTest = false; });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to start test. Please try again.'), backgroundColor: Colors.red),
+        );
+        return;
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isStarted = true;
+        _startingTest = false;
+      });
+      _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+        if (_timeRemaining <= 1) {
+          t.cancel();
+          _autoSubmit();
+        }
+        if (mounted) {
+          setState(() => _timeRemaining--);
+        }
+      });
+    }
   }
 
   Future<void> _autoSubmit() async {
@@ -108,6 +135,7 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
         'answers': _answers,
         'markedForLater': _markedForLater.toList(),
         'timeSpent': (_test?['durationInMinutes'] as int? ?? 0) * 60 - _timeRemaining,
+        if (_attemptId != null) 'attemptId': _attemptId,
       };
       final res = await _dio.post(ApiConstants.testSubmitEndpoint(widget.testId), data: payload);
       if (mounted) {
@@ -309,8 +337,32 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
   Widget _buildStartScreen() {
     final totalQ = _questions.length;
     final duration = _test?['durationInMinutes'] ?? 0;
-    final positive = _test?['positiveMarks'] ?? 0;
-    final negative = _test?['negativeMarks'] ?? 0;
+
+    var positiveRaw = _test?['positiveMarks'];
+    if (positiveRaw == null && _questions.isNotEmpty) {
+      positiveRaw = _questions.first['positiveMarks'];
+    }
+
+    var negativeRaw = _test?['negativeMarks'];
+    if (negativeRaw == null && _questions.isNotEmpty) {
+      negativeRaw = _questions.first['negativeMarks'];
+    }
+
+    String formatMarks(dynamic val) {
+      if (val is num) {
+        final absVal = val.abs();
+        if (absVal % 1 == 0) {
+          return absVal.toInt().toString();
+        }
+        return absVal.toString();
+      }
+      return '0';
+    }
+
+    final positiveStr = formatMarks(positiveRaw);
+    final negativeStr = formatMarks(negativeRaw);
+    final positivePrefix = positiveStr == '0' ? '' : '+';
+    final negativePrefix = negativeStr == '0' ? '' : '-';
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -348,9 +400,9 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
                     const Divider(height: 24),
                     _infoRow(Icons.timer_outlined, 'Duration', '$duration min'),
                     const Divider(height: 24),
-                    _infoRow(Icons.add_circle_outline, 'Positive Marks', '+$positive'),
+                    _infoRow(Icons.add_circle_outline, 'Positive Marks', '$positivePrefix$positiveStr'),
                     const Divider(height: 24),
-                    _infoRow(Icons.remove_circle_outline, 'Negative Marks', '-$negative'),
+                    _infoRow(Icons.remove_circle_outline, 'Negative Marks', '$negativePrefix$negativeStr'),
                   ],
                 ),
               ),
@@ -358,7 +410,7 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _startTest,
+                  onPressed: _startingTest ? null : _startTest,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.black,
                     foregroundColor: Colors.white,
@@ -366,7 +418,16 @@ class _TestAttemptScreenState extends State<TestAttemptScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     elevation: 0,
                   ),
-                  child: const Text('Start Test', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+                  child: _startingTest
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text('Start Test', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
                 ),
               ),
             ],

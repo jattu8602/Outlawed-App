@@ -1,7 +1,7 @@
 class ApiConstants {
   // Base URL for the hosted platform
-  static const String baseUrl = 'https://www.outlawed.in';
-  // static const String baseUrl = 'http://localhost:3000';
+  // static const String baseUrl = 'https://www.outlawed.in';
+  static const String baseUrl = 'http://localhost:3000';
   // static const String baseUrl = 'http://10.234.59.180:3000';
 
   // API Prefix
@@ -23,6 +23,7 @@ class ApiConstants {
   static const String premiumTestsEndpoint = '$apiPrefix/tests/premium';
   static String testDetailEndpoint(String id) => '$apiPrefix/tests/$id';
   static String testSubmitEndpoint(String id) => '$apiPrefix/tests/$id/submit';
+  static String testAttemptsEndpoint(String id) => '$apiPrefix/tests/$id/attempts';
 
   // Payment Endpoints
   static const String paymentPlansEndpoint = '$apiPrefix/payment-plans';

@@ -83,6 +83,32 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     return parts[0][0].toUpperCase();
   }
 
+  Widget _buildAvatar({
+    required String? name,
+    required String? imageUrl,
+    required double radius,
+    Color? bgColor,
+    Color? textColor,
+    double? fontSize,
+  }) {
+    final hasImage = imageUrl != null && imageUrl.isNotEmpty;
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: bgColor ?? Colors.grey.shade200,
+      backgroundImage: hasImage ? NetworkImage(imageUrl) : null,
+      child: hasImage
+          ? null
+          : Text(
+              _getInitials(name),
+              style: TextStyle(
+                fontSize: fontSize ?? radius * 0.65,
+                fontWeight: FontWeight.w800,
+                color: textColor ?? Colors.grey.shade700,
+              ),
+            ),
+    );
+  }
+
   Color _rankColor(int rank) {
     switch (rank) {
       case 1: return const Color(0xFFF59E0B);
@@ -127,20 +153,17 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   Widget _buildPodiumItem(Map<String, dynamic> user, int rank, double avatarSize) {
     final name = user['name'] ?? 'Anonymous';
     final score = (user['totalScore'] ?? 0).toString();
+    final imageUrl = user['image'] as String?;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        CircleAvatar(
+        _buildAvatar(
+          name: name,
+          imageUrl: imageUrl,
           radius: avatarSize / 2,
-          backgroundColor: _rankColor(rank).withOpacity(0.15),
-          child: Text(
-            _getInitials(name),
-            style: TextStyle(
-              fontSize: avatarSize / 3,
-              fontWeight: FontWeight.w800,
-              color: _rankColor(rank),
-            ),
-          ),
+          bgColor: _rankColor(rank).withOpacity(0.15),
+          textColor: _rankColor(rank),
+          fontSize: avatarSize / 3,
         ),
         const SizedBox(height: 8),
         Text(
@@ -430,16 +453,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                           ),
                         ),
                       ],
-
-                      ...List.generate(_leaderboard.length, (i) {
+                       ...List.generate(_leaderboard.length, (i) {
                         final user = _leaderboard[i];
                         final rank = i + 1;
                         final name = user['name'] ?? 'Anonymous';
                         final score = (user['totalScore'] ?? 0).toString();
                         final tests = user['totalTests'] ?? 0;
+                        final imageUrl = user['image'] as String?;
 
                         return Container(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
                             border: i < _leaderboard.length - 1
                                 ? Border(bottom: BorderSide(color: Colors.grey.shade200))
@@ -462,7 +485,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                         ),
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 10),
+                              _buildAvatar(
+                                name: name,
+                                imageUrl: imageUrl,
+                                radius: 18,
+                                bgColor: Colors.grey.shade100,
+                              ),
+                              const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -568,6 +598,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                 final name = user['name'] ?? 'Anonymous';
                                 final streak = user['currentStreak'] ?? 0;
                                 final peak = user['peakStreak'] ?? 0;
+                                final imageUrl = user['image'] as String?;
                                 return Container(
                                   padding: const EdgeInsets.symmetric(vertical: 10),
                                   decoration: BoxDecoration(
@@ -579,17 +610,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                     children: [
                                       Stack(
                                         children: [
-                                          CircleAvatar(
+                                          _buildAvatar(
+                                            name: name,
+                                            imageUrl: imageUrl,
                                             radius: 18,
-                                            backgroundColor: Colors.grey.shade900,
-                                            child: Text(
-                                              _getInitials(name),
-                                              style: const TextStyle(
-                                                color: Colors.grey,
-                                                fontWeight: FontWeight.w700,
-                                                fontSize: 11,
-                                              ),
-                                            ),
+                                            bgColor: Colors.grey.shade900,
+                                            textColor: Colors.grey,
+                                            fontSize: 11,
                                           ),
                                           if (i < 3)
                                             Positioned(
@@ -683,21 +710,18 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                         final user = _historicalStreak[i];
                                         final name = user['name'] ?? 'Anonymous';
                                         final peak = user['peakStreak'] ?? 0;
+                                        final imageUrl = user['image'] as String?;
                                         return Container(
                                           padding: const EdgeInsets.symmetric(vertical: 8),
                                           child: Row(
                                             children: [
-                                              CircleAvatar(
+                                              _buildAvatar(
+                                                name: name,
+                                                imageUrl: imageUrl,
                                                 radius: 14,
-                                                backgroundColor: Colors.grey.shade900,
-                                                child: Text(
-                                                  _getInitials(name),
-                                                  style: TextStyle(
-                                                    color: Colors.grey.shade700,
-                                                    fontWeight: FontWeight.w700,
-                                                    fontSize: 9,
-                                                  ),
-                                                ),
+                                                bgColor: Colors.grey.shade900,
+                                                textColor: Colors.grey.shade700,
+                                                fontSize: 9,
                                               ),
                                               const SizedBox(width: 10),
                                               Expanded(
